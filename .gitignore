@@ -1,0 +1,27 @@
+# Dependencies
+node_modules/
+
+# Environment variables
+.env
+
+# Storage data
+data/posted.json
+
+# Logs
+*.log
+logs/
+
+# IDE
+.vscode/
+.idea/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Ruby files (shouldn't be here)
+src/ruby-3.1.6/
+src/ruby-3.1.6.tar.xz
+src/*.tar.xz
+data/.minio.sys/
+data/.DS_Store
