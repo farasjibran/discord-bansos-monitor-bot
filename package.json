@@ -9,7 +9,8 @@
     "dev": "node --watch src/index.js",
     "test": "node src/test.js",
     "check": "node src/manual-check.js",
-    "clear": "node src/clear-storage.js"
+    "clear": "node src/clear-storage.js",
+    "init": "node src/init-fresh-start.js"
   },
   "keywords": [
     "discord",
