@@ -128,15 +128,25 @@ class BansosAIScraper {
             }
           }
           
-          // Cari description - ambil paragraph pertama setelah title
+          // Cari description - prioritaskan p dengan class line-clamp atau text-text-mid
           let description = null;
-          $el.find('p').each((i, p) => {
-            const text = $(p).text().trim();
-            if (text && text.length > 10 && text !== title) {
-              description = text;
-              return false; // break
-            }
-          });
+          
+          // Coba cari p dengan class spesifik dulu (line-clamp, text-text-mid, dll)
+          const $specificDesc = $el.find('p.line-clamp-3, p[class*="line-clamp"], p[class*="text-text-mid"]').first();
+          if ($specificDesc.length > 0) {
+            description = $specificDesc.text().trim();
+          }
+          
+          // Fallback: ambil paragraph pertama setelah title jika tidak ketemu
+          if (!description) {
+            $el.find('p').each((i, p) => {
+              const text = $(p).text().trim();
+              if (text && text.length > 10 && text !== title) {
+                description = text;
+                return false; // break
+              }
+            });
+          }
           
           // Cek apakah ada label "Hot"
           const isHot = fullText.includes('Hot') && !fullText.includes('Hotline');
