@@ -124,7 +124,7 @@ class BansosAIMonitor {
       console.log(`[Monitor] Berhasil scrape ${result.items.length} items`);
 
       // Filter item baru (yang belum pernah dipost)
-      const newItems = result.items.filter(item => !this.storage.isPosted(item.id));
+      const newItems = result.items.filter(item => !this.storage.isPosted(item.id, item.link));
 
       console.log(`[Monitor] Ditemukan ${newItems.length} konten baru`);
 
@@ -134,20 +134,24 @@ class BansosAIMonitor {
         
         const sendResults = await this.discord.sendBulkNotifications(newItems);
 
-        // Tandai sebagai sudah dipost HANYA yang berhasil dikirim
-        // TODO: Track which items succeeded - for now mark all to avoid spam
-        // Better: Only mark successful items once we track individual results
-        if (sendResults.success > 0) {
-          newItems.forEach(item => {
+        // Tandai HANYA item yang benar-benar berhasil dikirim
+        if (sendResults.successItems && sendResults.successItems.length > 0) {
+          console.log(`[Monitor] Menandai ${sendResults.successItems.length} item sebagai posted...`);
+          sendResults.successItems.forEach(item => {
             this.storage.markAsPosted(item);
           });
         }
 
-        console.log(`[Monitor] ✅ Berhasil mengirim ${sendResults.success} notifikasi`);
+        console.log(`[Monitor] ✅ Berhasil mengirim ${sendResults.successCount} notifikasi`);
         
-        if (sendResults.failed > 0) {
-          console.log(`[Monitor] ⚠️  ${sendResults.failed} notifikasi gagal dikirim`);
-          console.log(`[Monitor] ⚠️  Items yang gagal TIDAK di-mark as posted, akan retry next run`);
+        if (sendResults.failedCount > 0) {
+          console.log(`[Monitor] ⚠️  ${sendResults.failedCount} notifikasi gagal dikirim`);
+          console.log(`[Monitor] ⚠️  Item yang gagal TIDAK ditandai sebagai posted, akan retry di run berikutnya`);
+          if (sendResults.failedItems && sendResults.failedItems.length > 0) {
+            sendResults.failedItems.forEach(item => {
+              console.log(`[Monitor]    - ${item.title} (ID: ${item.id})`);
+            });
+          }
         }
       } else {
         console.log('[Monitor] Tidak ada konten baru');
@@ -156,8 +160,8 @@ class BansosAIMonitor {
       // Update last check time
       this.storage.updateLastCheck();
 
-      // Cleanup data lama (30 hari)
-      this.storage.cleanup(30);
+      // Cleanup data lama (180 hari) - lebih lama untuk menghindari re-posting artikel lama
+      this.storage.cleanup(180);
 
       const duration = ((Date.now() - startTime) / 1000).toFixed(2);
       console.log(`[Monitor] Pengecekan selesai dalam ${duration}s`);

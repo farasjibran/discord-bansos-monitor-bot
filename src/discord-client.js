@@ -164,21 +164,28 @@ class DiscordNotifier {
   /**
    * Kirim notifikasi untuk multiple items
    * @param {Array} items 
+   * @returns {Object} { successCount, failedCount, successItems, failedItems }
    */
   async sendBulkNotifications(items) {
     console.log(`[Discord] Sending ${items.length} notifications...`);
     
     const results = {
-      success: 0,
-      failed: 0
+      successCount: 0,
+      failedCount: 0,
+      successItems: [],
+      failedItems: []
     };
 
     for (const item of items) {
       const success = await this.sendNotification(item);
       if (success) {
-        results.success++;
+        results.successCount++;
+        results.successItems.push(item);
+        console.log(`[Discord] ✓ Sent: ${item.title} (ID: ${item.id})`);
       } else {
-        results.failed++;
+        results.failedCount++;
+        results.failedItems.push(item);
+        console.log(`[Discord] ✗ Failed: ${item.title} (ID: ${item.id})`);
       }
 
       // Delay untuk menghindari rate limit (2 detik antar message)
@@ -187,7 +194,7 @@ class DiscordNotifier {
       }
     }
 
-    console.log(`[Discord] Bulk send completed: ${results.success} success, ${results.failed} failed`);
+    console.log(`[Discord] Bulk send completed: ${results.successCount} success, ${results.failedCount} failed`);
     return results;
   }
 

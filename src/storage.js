@@ -72,11 +72,54 @@ class Storage {
 
   /**
    * Cek apakah item sudah pernah dipost
+   * Cek berdasarkan ID dan juga link untuk menghindari duplikasi
    * @param {string} itemId 
+   * @param {string} itemLink - Optional, untuk double-check
    * @returns {boolean}
    */
-  isPosted(itemId) {
-    return this.data.posted.some(item => item.id === itemId);
+  isPosted(itemId, itemLink = null) {
+    // Cek berdasarkan ID
+    const foundById = this.data.posted.some(item => item.id === itemId);
+    if (foundById) {
+      return true;
+    }
+    
+    // Cek juga berdasarkan link jika disediakan (untuk menghindari duplikasi jika ID berubah)
+    if (itemLink) {
+      // Normalize URL untuk perbandingan (hapus trailing slash, query params)
+      const normalizedNewLink = this.normalizeUrl(itemLink);
+      const foundByLink = this.data.posted.some(item => {
+        if (!item.link) return false;
+        const normalizedStoredLink = this.normalizeUrl(item.link);
+        return normalizedStoredLink === normalizedNewLink;
+      });
+      
+      if (foundByLink) {
+        console.log(`[Storage] Item dengan link yang sama sudah ada: ${itemLink}`);
+        return true;
+      }
+    }
+    
+    return false;
+  }
+
+  /**
+   * Normalize URL untuk perbandingan yang konsisten
+   * @param {string} url 
+   * @returns {string}
+   */
+  normalizeUrl(url) {
+    try {
+      const urlObj = new URL(url);
+      // Ambil hanya protocol, host, pathname (tanpa query params, hash, trailing slash)
+      let normalized = `${urlObj.protocol}//${urlObj.host}${urlObj.pathname}`;
+      // Hapus trailing slash
+      normalized = normalized.replace(/\/$/, '');
+      return normalized.toLowerCase();
+    } catch {
+      // Jika parsing gagal, return as-is
+      return url.toLowerCase();
+    }
   }
 
   /**
@@ -84,14 +127,17 @@ class Storage {
    * @param {object} item 
    */
   markAsPosted(item) {
-    if (!this.isPosted(item.id)) {
+    if (!this.isPosted(item.id, item.link)) {
       this.data.posted.push({
         id: item.id,
         title: item.title,
+        link: item.link || null,
         postedAt: new Date().toISOString()
       });
       this.save();
-      console.log(`[Storage] Marked as posted: ${item.title}`);
+      console.log(`[Storage] Marked as posted: ${item.title} (ID: ${item.id})`);
+    } else {
+      console.log(`[Storage] Item sudah ada, skip: ${item.title} (ID: ${item.id})`);
     }
   }
 
