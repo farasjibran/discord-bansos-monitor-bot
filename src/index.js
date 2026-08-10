@@ -1,6 +1,7 @@
 import dotenv from 'dotenv';
 import cron from 'node-cron';
-import BansosAIScraper from './scraper.js';
+import AppVerseScraper from './scrapers/appverse-scraper.js';
+import BansosDevScraper from './scrapers/bansosdev-scraper.js';
 import Storage from './storage.js';
 import DiscordNotifier from './discord-client.js';
 
@@ -15,11 +16,15 @@ class BansosAIMonitor {
     this.config = {
       discordToken: process.env.DISCORD_TOKEN,
       channelId: process.env.DISCORD_CHANNEL_ID,
-      websiteUrl: process.env.WEBSITE_URL || 'https://appverse.id/bansos-ai',
       cronSchedule: process.env.CRON_SCHEDULE || '0 * * * *' // Default: setiap jam
     };
 
-    this.scraper = new BansosAIScraper(this.config.websiteUrl);
+    // Initialize multiple scrapers
+    this.scrapers = [
+      new AppVerseScraper('https://appverse.id/bansos-ai'),
+      new BansosDevScraper('https://bansos.dev/list/')
+    ];
+    
     this.storage = new Storage();
     this.discord = null;
     this.cronJob = null;
@@ -68,7 +73,10 @@ class BansosAIMonitor {
       }
 
       console.log('[Monitor] Konfigurasi:');
-      console.log(`  - Website: ${this.config.websiteUrl}`);
+      console.log(`  - Websites:`);
+      this.scrapers.forEach(scraper => {
+        console.log(`    • ${scraper.url} (${scraper.name})`);
+      });
       console.log(`  - Cron Schedule: ${this.config.cronSchedule}`);
       console.log(`  - Channel ID: ${this.config.channelId}`);
 
@@ -114,17 +122,26 @@ class BansosAIMonitor {
       console.log(`[Monitor] Pengecekan dimulai: ${new Date().toLocaleString('id-ID')}`);
       console.log('='.repeat(60));
 
-      // Scrape website
-      const result = await this.scraper.scrape();
+      // Scrape dari semua website
+      const allItems = [];
+      
+      for (const scraper of this.scrapers) {
+        console.log(`[Monitor] Scraping dari ${scraper.name}...`);
+        const result = await scraper.scrape();
 
-      if (!result.success) {
-        throw new Error(`Scraping gagal: ${result.error}`);
+        if (!result.success) {
+          console.error(`[Monitor] ${scraper.name} gagal: ${result.error}`);
+          continue; // Skip to next scraper
+        }
+
+        console.log(`[Monitor] ${scraper.name} berhasil scrape ${result.items.length} items`);
+        allItems.push(...result.items);
       }
 
-      console.log(`[Monitor] Berhasil scrape ${result.items.length} items`);
+      console.log(`[Monitor] Total ${allItems.length} items dari semua sumber`);
 
       // Filter item baru (yang belum pernah dipost)
-      const newItems = result.items.filter(item => !this.storage.isPosted(item.id, item.link));
+      const newItems = allItems.filter(item => !this.storage.isPosted(item.id, item.link));
 
       console.log(`[Monitor] Ditemukan ${newItems.length} konten baru`);
 

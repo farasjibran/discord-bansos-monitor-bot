@@ -1,16 +1,21 @@
 # Discord Bansos AI Monitor Bot
 
-Bot Discord untuk memantau konten terbaru di [AppVerse Bansos AI](https://appverse.id/bansos-ai) dan mengirim notifikasi otomatis setiap ada konten baru.
+Bot Discord untuk memantau konten terbaru dari **multiple sources** dan mengirim notifikasi otomatis setiap ada konten baru.
+
+**Website yang dimonitor:**
+- 🔹 [AppVerse Bansos AI](https://appverse.id/bansos-ai) - Kurasi tools AI murah/gratis
+- 🔹 [Bansos.dev](https://bansos.dev/list/) - Direktori bantuan sosial developer Indonesia
 
 ## 🚀 Fitur
 
+- ✅ **Multi-website monitoring**: Monitor 2 sumber sekaligus (AppVerse & Bansos.dev)
 - ✅ **Auto-monitoring**: Cek konten baru setiap 1 jam (bisa dikustomisasi)
 - ✅ **Notifikasi Discord**: Kirim notifikasi otomatis dengan embed yang menarik
+- ✅ **Source differentiation**: Format embed berbeda per sumber
 - ✅ **Smart tracking**: Tidak akan mengirim notifikasi duplikat
 - ✅ **Storage persistent**: Menyimpan data konten yang sudah dipost
 - ✅ **Cleanup otomatis**: Hapus data lama untuk menjaga ukuran file
-- ✅ **Hot label detection**: Highlight konten dengan label "Hot"
-- ✅ **Rich embed**: Tampilkan gambar, tanggal, views, dan deskripsi
+- ✅ **Rich embed**: Tampilkan gambar, tanggal, views, tags, dan deskripsi
 
 ## 📋 Prerequisites
 
@@ -106,7 +111,9 @@ npm run dev
 🤖 Bansos AI Monitor Bot - Starting...
 ============================================================
 [Monitor] Konfigurasi:
-  - Website: https://appverse.id/bansos-ai
+  - Websites:
+    • https://appverse.id/bansos-ai (AppVerseScraper)
+    • https://bansos.dev/list/ (BansosDevScraper)
   - Cron Schedule: 0 * * * *
   - Channel ID: 1234567890123456789
 
@@ -119,18 +126,25 @@ npm run dev
 
 [Monitor] Menjalankan pengecekan awal...
 ============================================================
-[Monitor] Pengecekan dimulai: 23/6/2026 23:36:00
+[Monitor] Pengecekan dimulai: 10/8/2026 10:48:00
 ============================================================
-[Scraper] Fetching data from: https://appverse.id/bansos-ai
-[Scraper] Found 4 items
-[Monitor] Berhasil scrape 4 items
-[Monitor] Ditemukan 4 konten baru
+[Monitor] Scraping dari AppVerseScraper...
+[AppVerseScraper] Fetching data from: https://appverse.id/bansos-ai
+[AppVerseScraper] Found 54 valid items (after filtering Obsolete)
+[Monitor] AppVerseScraper berhasil scrape 54 items
+[Monitor] Scraping dari BansosDevScraper...
+[BansosDevScraper] Fetching data from: https://bansos.dev/list/
+[BansosDevScraper] Found 15 items
+[Monitor] BansosDevScraper berhasil scrape 15 items
+[Monitor] Total 69 items dari semua sumber
+[Monitor] Ditemukan 8 konten baru
 [Monitor] Mengirim notifikasi ke Discord...
-[Discord] Notification sent: Tutorial Claim FreeModel.dev
-[Discord] Notification sent: Tutorial Claim OpenCode 15 USD
+[Discord] Notification sent: Bansos Qoder 3.8 Max (appverse)
+[Discord] Notification sent: AI Router by Nara (bansos.dev)
+[Discord] Notification sent: FreeModel Invite Referral (bansos.dev)
 ...
-[Monitor] ✅ Berhasil mengirim 4 notifikasi
-[Monitor] Pengecekan selesai dalam 3.45s
+[Monitor] ✅ Berhasil mengirim 8 notifikasi
+[Monitor] Pengecekan selesai dalam 4.23s
 ============================================================
 
 [Monitor] Memulai cron job...
@@ -138,6 +152,87 @@ npm run dev
 ✅ Cron job berhasil dimulai!
 
 ✅ Bot berjalan! Tekan Ctrl+C untuk menghentikan
+```
+
+## 🌐 Multi-Website Monitoring
+
+Bot sekarang memonitor **2 sumber** sekaligus untuk memberikan coverage maksimal:
+
+### 📊 Sumber Data
+
+#### 1. AppVerse Bansos AI
+- **URL**: https://appverse.id/bansos-ai
+- **Fokus**: Kurasi tools AI murah dan gratis
+- **Update**: Frequent updates, community-driven
+- **Data yang tersedia**:
+  - Title & description
+  - Image thumbnails
+  - Tanggal publikasi (format Indonesia)
+  - View count
+  - "Hot" label untuk trending items
+  - Link ke tutorial lengkap
+
+#### 2. Bansos.dev
+- **URL**: https://bansos.dev/list/
+- **Fokus**: Direktori bantuan sosial developer Indonesia
+- **Update**: Curated directory
+- **Data yang tersedia**:
+  - Title & description
+  - Provider information
+  - Tags/categories (AI, Cloud, Free Tier, etc.)
+  - "Featured" label untuk highlight
+  - Status (AKTIF/OBSOLETE)
+  - Validity period
+  - Link ke detail claim
+
+### 🎯 Perbedaan Format Notifikasi
+
+Bot akan mengirim **Discord embed berbeda** untuk setiap sumber:
+
+**AppVerse Items:**
+- 🟦 Warna biru (#5865F2)
+- Menampilkan: thumbnail, tanggal, views
+- Badge "🔥 HOT" jika trending
+- Footer: "Source: AppVerse Bansos AI"
+
+**Bansos.dev Items:**
+- 🟩 Warna hijau (#10b981)
+- Menampilkan: provider, tags, validity
+- Badge "⭐ FEATURED" jika highlighted
+- Footer: "Source: Bansos.dev"
+
+### 📈 Coverage
+
+Dengan monitoring multi-sumber, bot dapat mendeteksi:
+- **~50-80 items** dari AppVerse (AI tools, credits, API)
+- **~15-20 items** dari Bansos.dev (cloud services, hosting, domains)
+- **Total ~70-100 programs** dipantau setiap jam
+
+### 🔄 Smart Deduplication
+
+Bot menggunakan **ID tracking** untuk menghindari notifikasi duplikat:
+- Setiap item punya unique ID berdasarkan URL
+- Items dari sources berbeda ditrack terpisah
+- History disimpan di `data/posted.json`
+
+### 🚀 Menambah Sumber Baru
+
+Arsitektur bot dirancang modular. Untuk menambah website baru:
+
+1. Buat scraper baru di `src/scrapers/`
+2. Extend dari `BaseScraper` class
+3. Implement method `scrape()` 
+4. Tambahkan ke array `scrapers` di `src/index.js`
+
+Contoh:
+```javascript
+import NewSiteScraper from './scrapers/newsite-scraper.js';
+
+this.scrapers = [
+  new AppVerseScraper('https://appverse.id/bansos-ai'),
+  new BansosDevScraper('https://bansos.dev/list/'),
+  new NewSiteScraper('https://newsite.com/api') // ← Tambahkan di sini
+];
 ```
 
 ## ⚙️ Konfigurasi
@@ -172,14 +267,17 @@ Gunakan [Crontab Guru](https://crontab.guru/) untuk membantu membuat cron expres
 ```
 discord-bansos-monitor-bot/
 ├── src/
-│   ├── index.js           # File utama, orchestrator
-│   ├── scraper.js         # Web scraper untuk ambil data
-│   ├── storage.js         # Storage manager untuk tracking
-│   └── discord-client.js  # Discord notifier
+│   ├── scrapers/
+│   │   ├── base-scraper.js      # Base class untuk semua scraper
+│   │   ├── appverse-scraper.js  # Scraper untuk AppVerse
+│   │   └── bansosdev-scraper.js # Scraper untuk Bansos.dev
+│   ├── index.js                  # File utama, orchestrator
+│   ├── storage.js                # Storage manager untuk tracking
+│   └── discord-client.js         # Discord notifier
 ├── data/
-│   └── posted.json        # Database sederhana (auto-generated)
-├── .env                   # Environment variables (jangan di-commit!)
-├── .env.example           # Template environment variables
+│   └── posted.json               # Database sederhana (auto-generated)
+├── .env                          # Environment variables (jangan di-commit!)
+├── .env.example                  # Template environment variables
 ├── .gitignore
 ├── package.json
 └── README.md

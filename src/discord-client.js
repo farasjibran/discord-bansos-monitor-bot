@@ -100,15 +100,42 @@ class DiscordNotifier {
    * @returns {EmbedBuilder}
    */
   createEmbed(item) {
+    const source = item.source || 'appverse'; // Default ke appverse jika tidak ada
+    
+    // Konfigurasi berbeda per source
+    const sourceConfig = {
+      'appverse': {
+        color: 0x5865F2, // Discord Blurple
+        footerText: 'Source: AppVerse Bansos AI',
+        footerIcon: 'https://appverse.id/favicon.ico',
+        hotColor: 0xFF4500 // Orange untuk Hot items
+      },
+      'bansos.dev': {
+        color: 0x10b981, // Green
+        footerText: 'Source: Bansos.dev',
+        footerIcon: 'https://bansos.dev/favicon.ico',
+        featuredColor: 0xFBBF24 // Yellow untuk Featured items
+      }
+    };
+
+    const config = sourceConfig[source] || sourceConfig['appverse'];
+
+    // Determine color berdasarkan source dan status
+    let embedColor = config.color;
+    if (source === 'appverse' && item.isHot) {
+      embedColor = config.hotColor;
+    } else if (source === 'bansos.dev' && item.isFeatured) {
+      embedColor = config.featuredColor;
+    }
+
     const embed = new EmbedBuilder()
       .setTitle(item.title)
       .setURL(item.link)
-      .setColor(item.isHot ? 0xFF4500 : 0x0099FF) // Orange untuk "Hot", biru untuk normal
+      .setColor(embedColor)
       .setTimestamp();
 
     // Add description jika ada
     if (item.description) {
-      // Potong description jika terlalu panjang
       const maxLength = 300;
       const desc = item.description.length > maxLength 
         ? item.description.substring(0, maxLength) + '...'
@@ -116,46 +143,93 @@ class DiscordNotifier {
       embed.setDescription(desc);
     }
 
-    // Add image jika ada
+    // Add image jika ada (biasanya dari AppVerse)
     if (item.image) {
       embed.setImage(item.image);
     }
 
-    // Add fields
+    // Build fields berdasarkan source
     const fields = [];
 
-    if (item.dateText) {
-      fields.push({
-        name: '📅 Tanggal',
-        value: item.dateText,
-        inline: true
-      });
-    }
+    if (source === 'appverse') {
+      // AppVerse specific fields
+      if (item.dateText) {
+        fields.push({
+          name: '📅 Tanggal',
+          value: item.dateText,
+          inline: true
+        });
+      }
 
-    if (item.views > 0) {
-      fields.push({
-        name: '👁️ Views',
-        value: item.views.toLocaleString('id-ID'),
-        inline: true
-      });
-    }
+      if (item.views !== undefined && item.views > 0) {
+        fields.push({
+          name: '👁️ Views',
+          value: item.views.toLocaleString('id-ID'),
+          inline: true
+        });
+      }
 
-    if (item.isHot) {
-      fields.push({
-        name: '🔥 Status',
-        value: 'HOT!',
-        inline: true
-      });
+      if (item.isHot) {
+        fields.push({
+          name: '🔥 Status',
+          value: 'HOT!',
+          inline: true
+        });
+      }
+    } else if (source === 'bansos.dev') {
+      // Bansos.dev specific fields
+      if (item.provider) {
+        fields.push({
+          name: '🏢 Provider',
+          value: item.provider,
+          inline: true
+        });
+      }
+
+      if (item.validity) {
+        fields.push({
+          name: '⏰ Validity',
+          value: item.validity,
+          inline: true
+        });
+      }
+
+      if (item.isFeatured) {
+        fields.push({
+          name: '⭐ Status',
+          value: 'FEATURED',
+          inline: true
+        });
+      }
+
+      if (item.tags && item.tags.length > 0) {
+        // Batasi tags maksimal 5 untuk tidak terlalu panjang
+        const displayTags = item.tags.slice(0, 5).join(', ');
+        const moreCount = item.tags.length > 5 ? ` (+${item.tags.length - 5} more)` : '';
+        fields.push({
+          name: '🏷️ Tags',
+          value: displayTags + moreCount,
+          inline: false
+        });
+      }
+
+      if (item.isActive !== undefined) {
+        fields.push({
+          name: '✅ Status',
+          value: item.isActive ? 'AKTIF' : 'OBSOLETE',
+          inline: true
+        });
+      }
     }
 
     if (fields.length > 0) {
       embed.addFields(fields);
     }
 
-    // Footer
+    // Footer dengan source differentiation
     embed.setFooter({ 
-      text: 'AppVerse Bansos AI Monitor',
-      iconURL: 'https://appverse.id/favicon.ico'
+      text: config.footerText,
+      iconURL: config.footerIcon
     });
 
     return embed;

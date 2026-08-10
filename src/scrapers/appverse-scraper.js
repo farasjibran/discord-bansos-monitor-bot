@@ -1,18 +1,11 @@
-import axios from 'axios';
-import * as cheerio from 'cheerio';
+import BaseScraper from './base-scraper.js';
 
 /**
  * Scraper untuk mengambil data dari AppVerse Bansos AI
  */
-class BansosAIScraper {
-  constructor(url) {
-    this.url = url;
-    this.axiosInstance = axios.create({
-      timeout: 30000,
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-      }
-    });
+class AppVerseScraper extends BaseScraper {
+  constructor(url = 'https://appverse.id/bansos-ai') {
+    super(url, 'AppVerseScraper');
     
     // Mapping bulan Indonesia ke angka
     this.monthMap = {
@@ -51,25 +44,33 @@ class BansosAIScraper {
       
       return null;
     } catch (err) {
-      console.error('[Scraper] Error parsing date:', err.message);
+      console.error(`[${this.name}] Error parsing date:`, err.message);
       return null;
     }
   }
 
   /**
-   * Fetch halaman web dan parse HTML
-   * @returns {Promise<object>} Data yang di-scrape
+   * Scrape data dari AppVerse Bansos AI
+   * @returns {Promise<object>}
    */
   async scrape() {
     try {
-      console.log(`[Scraper] Fetching data from: ${this.url}`);
-      const response = await this.axiosInstance.get(this.url);
-      const $ = cheerio.load(response.data);
+      const pageResult = await this.fetchPage();
+      
+      if (!pageResult.success) {
+        return {
+          success: false,
+          items: [],
+          error: pageResult.error,
+          scrapedAt: new Date().toISOString(),
+          source: 'appverse'
+        };
+      }
 
+      const $ = pageResult.$;
       const items = [];
 
-      // Strategi scraping yang lebih spesifik berdasarkan struktur HTML AppVerse
-      // Cari semua container yang kemungkinan berisi item resource
+      // Strategi scraping untuk struktur HTML AppVerse
       $('div, article, section').each((index, element) => {
         try {
           const $el = $(element);
@@ -80,7 +81,7 @@ class BansosAIScraper {
             return; // continue to next iteration
           }
           
-          // Cari h3 untuk title (berdasarkan struktur yang terlihat)
+          // Cari h3 untuk title
           const title = $el.find('h3').first().text().trim();
           if (!title || title.length < 3) return;
           
@@ -97,9 +98,8 @@ class BansosAIScraper {
           if (!link) return;
           
           // Convert relative URL ke absolute
-          if (!link.startsWith('http')) {
-            link = new URL(link, this.url).href;
-          }
+          link = this.normalizeUrl(link, this.url);
+          if (!link) return;
           
           // Cari tanggal dengan format "Dibuat pada: ..."
           const dateMatch = fullText.match(/Dibuat pada:\s*([^\n]+)/);
@@ -111,7 +111,7 @@ class BansosAIScraper {
           }
           const parsedDate = this.parseIndonesianDate(dateText);
           
-          // Cari view count - biasanya angka besar
+          // Cari view count
           const viewMatch = fullText.match(/Lihat\s*([\d.,]+)/);
           let views = 0;
           if (viewMatch) {
@@ -120,24 +120,18 @@ class BansosAIScraper {
           
           // Cari image
           let image = $el.find('img').first().attr('src');
-          if (image && !image.startsWith('http') && !image.startsWith('data:')) {
-            try {
-              image = new URL(image, this.url).href;
-            } catch {
-              image = null;
-            }
-          }
+          image = this.normalizeUrl(image, this.url);
           
-          // Cari description - prioritaskan p dengan class line-clamp atau text-text-mid
+          // Cari description
           let description = null;
           
-          // Coba cari p dengan class spesifik dulu (line-clamp, text-text-mid, dll)
+          // Prioritaskan p dengan class spesifik
           const $specificDesc = $el.find('p.line-clamp-3, p[class*="line-clamp"], p[class*="text-text-mid"]').first();
           if ($specificDesc.length > 0) {
             description = $specificDesc.text().trim();
           }
           
-          // Fallback: ambil paragraph pertama setelah title jika tidak ketemu
+          // Fallback: ambil paragraph pertama setelah title
           if (!description) {
             $el.find('p').each((i, p) => {
               const text = $(p).text().trim();
@@ -163,24 +157,17 @@ class BansosAIScraper {
               image: image || null,
               description: description || null,
               isHot,
-              scrapedAt: new Date().toISOString()
+              scrapedAt: new Date().toISOString(),
+              source: 'appverse'
             });
           }
         } catch (err) {
-          console.error('[Scraper] Error parsing element:', err.message);
+          console.error(`[${this.name}] Error parsing element:`, err.message);
         }
       });
 
-      // Remove duplicates berdasarkan ID
-      const uniqueItems = [];
-      const seenIds = new Set();
-      
-      for (const item of items) {
-        if (!seenIds.has(item.id)) {
-          seenIds.add(item.id);
-          uniqueItems.push(item);
-        }
-      }
+      // Remove duplicates
+      const uniqueItems = this.removeDuplicates(items);
 
       // Sort berdasarkan tanggal (terbaru dulu)
       uniqueItems.sort((a, b) => {
@@ -193,68 +180,26 @@ class BansosAIScraper {
         return b.date.getTime() - a.date.getTime();
       });
 
-      console.log(`[Scraper] Found ${uniqueItems.length} valid items (after filtering Obsolete)`);
+      console.log(`[${this.name}] Found ${uniqueItems.length} valid items (after filtering Obsolete)`);
       
       return {
         success: true,
         items: uniqueItems,
-        scrapedAt: new Date().toISOString()
+        scrapedAt: new Date().toISOString(),
+        source: 'appverse'
       };
 
     } catch (error) {
-      console.error('[Scraper] Error fetching data:', error.message);
+      console.error(`[${this.name}] Error during scraping:`, error.message);
       return {
         success: false,
         items: [],
         error: error.message,
-        scrapedAt: new Date().toISOString()
+        scrapedAt: new Date().toISOString(),
+        source: 'appverse'
       };
     }
   }
-
-  /**
-   * Generate unique ID dari URL
-   * @param {string} url 
-   * @returns {string}
-   */
-  generateId(url) {
-    // Extract ID dari URL jika ada pattern seperti /resources/{id}/
-    const match = url.match(/\/([a-f0-9-]{36})\//);
-    if (match) {
-      return match[1];
-    }
-    
-    // Fallback: hash sederhana dari URL
-    let hash = 0;
-    for (let i = 0; i < url.length; i++) {
-      const char = url.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return Math.abs(hash).toString(36);
-  }
-
-  /**
-   * Filter hanya item terbaru (opsional, bisa digunakan untuk filter by date)
-   * @param {Array} items 
-   * @param {number} hoursAgo 
-   * @returns {Array}
-   */
-  filterRecentItems(items, hoursAgo = 24) {
-    const cutoffTime = new Date();
-    cutoffTime.setHours(cutoffTime.getHours() - hoursAgo);
-
-    return items.filter(item => {
-      if (!item.date) return true; // Include items tanpa tanggal
-      
-      try {
-        const itemDate = new Date(item.date);
-        return itemDate >= cutoffTime;
-      } catch {
-        return true; // Include jika parsing gagal
-      }
-    });
-  }
 }
 
-export default BansosAIScraper;
+export default AppVerseScraper;
