@@ -9,7 +9,7 @@ Bot Discord yang memantau AppVerse Bansos AI, Bansos.dev, dan pencarian publik u
 - **Google News RSS dan Reddit RSS** — pencarian referral Claude/Anthropic.
 - **Threads** — pencarian opsional melalui Threads Keyword Search API jika `THREADS_ACCESS_TOKEN` tersedia.
 
-Hasil pencarian publik harus menyebut Claude/Anthropic dan istilah referral, invite, gift, trial, atau free pro. Hasil tanpa tanggal valid, lebih tua dari tujuh hari, atau bertanggal masa depan dilewati. Sumber publik bersifat best-effort; kegagalan satu sumber tidak menghentikan sumber lain. Bot hanya mengirim tautan untuk klaim manual—tidak membuat akun atau mengklaim trial.
+Hasil pencarian publik hanya dikirim jika memuat link referral Claude langsung (`https://claude.ai/referral/<kode>`); notifikasi Discord memakai link referral tersebut sebagai tautan utama, bukan tautan post sumber. Post yang hanya membicarakan referral tanpa membagikan link akan dilewati. Hasil tanpa tanggal valid, lebih tua dari tujuh hari, atau bertanggal masa depan juga dilewati. Sumber publik bersifat best-effort; kegagalan satu sumber tidak menghentikan sumber lain. Bot hanya mengirim tautan untuk klaim manual—tidak membuat akun atau mengklaim trial.
 
 ## Persyaratan
 

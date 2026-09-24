@@ -156,6 +156,18 @@ class DiscordNotifier {
     const fields = [];
 
     if (source === 'public-search') {
+      fields.push({
+        name: '🎁 Link Referral',
+        value: item.link,
+        inline: false
+      });
+      if (item.postLink) {
+        fields.push({
+          name: 'Post Sumber',
+          value: item.postLink,
+          inline: false
+        });
+      }
       if (item.date) {
         fields.push({
           name: 'Published',

@@ -2,25 +2,36 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 const MAX_AGE_MS = 7 * 24 * 60 * 60 * 1000;
-const RELEVANCE_PATTERN = /claude|anthropic/i;
-const REFERRAL_PATTERN = /referral|invite|gift|trial|free pro/i;
 const THREADS_API_URL = 'https://graph.threads.net/v1.0/keyword_search';
 const THREADS_QUERIES = ['Claude referral', 'Claude gift', 'Anthropic invite'];
 const FEEDS = [
   {
     name: 'Google News',
-    url: buildGoogleNewsUrl('Claude referral gift invite trial'),
-  },
-  {
-    name: 'Google News',
-    url: buildGoogleNewsUrl('"Claude Pro" referral gift trial'),
+    url: buildGoogleNewsUrl('Claude (referral OR invite OR "free pro")'),
   },
   {
     name: 'Reddit',
     url: 'https://www.reddit.com/search.rss?q=Claude%20(referral%20OR%20' +
       'gift%20OR%20invite%20OR%20trial)&sort=new&t=week',
   },
+  {
+    name: 'Reddit',
+    url: 'https://www.reddit.com/search.rss?q=%22claude.ai%2Freferral%22&sort=new&t=week',
+  },
 ];
+
+export function extractReferralUrls(text) {
+  const matches = String(text || '').match(
+    /https?:\/\/(?:www\.)?claude\.ai\/referral\/[A-Za-z0-9_-]+/gi,
+  );
+  if (!matches) return [];
+  return [...new Set(matches.map((url) => url.replace(/^http:/i, 'https:')))];
+}
+
+export function stripHtml(html) {
+  if (!html) return '';
+  return cheerio.load(html).text().replace(/\s+/g, ' ').trim();
+}
 
 function buildGoogleNewsUrl(query) {
   const url = new URL('https://news.google.com/rss/search');
@@ -42,19 +53,21 @@ export function parseThreadsResponse(response, now = new Date()) {
     if (!/^https:\/\//i.test(post.permalink)) return [];
     if (Number.isNaN(publishedAt.getTime())) return [];
     if (publishedAt.getTime() < cutoff || publishedAt > now) return [];
-    if (!RELEVANCE_PATTERN.test(searchableText)) return [];
-    if (!REFERRAL_PATTERN.test(searchableText)) return [];
 
-    return [{
-      id: post.id,
+    const referralUrls = extractReferralUrls(searchableText);
+    if (referralUrls.length === 0) return [];
+
+    return referralUrls.map((referralUrl) => ({
+      id: referralUrl,
       title: `Threads post by @${post.username || 'unknown'}`,
-      link: post.permalink,
+      link: referralUrl,
+      postLink: post.permalink,
       description: searchableText,
       date: publishedAt,
       source: 'public-search',
       sourceName: 'Threads',
       scrapedAt: now.toISOString(),
-    }];
+    }));
   });
 }
 
@@ -71,24 +84,28 @@ export function parseRssFeed(xml, sourceName, now = new Date()) {
     const publicationText = item.find('pubDate, published, updated').first().text();
     const publishedAt = new Date(publicationText);
     const description = item.find('description, summary, content').first().text().trim();
-    const searchableText = `${title} ${description}`;
 
     if (!title || !link || Number.isNaN(publishedAt.getTime())) return;
     if (!/^https?:\/\//i.test(link)) return;
     if (publishedAt.getTime() < cutoff || publishedAt > now) return;
-    if (!RELEVANCE_PATTERN.test(searchableText)) return;
-    if (!REFERRAL_PATTERN.test(searchableText)) return;
 
-    items.push({
-      id: link,
-      title,
-      link,
-      description: description || null,
-      date: publishedAt,
-      source: 'public-search',
-      sourceName,
-      scrapedAt: now.toISOString(),
-    });
+    // Cari link referral di teks mentah (href + plain text) sebelum tag dibuang
+    const referralUrls = extractReferralUrls(`${title} ${description}`);
+    if (referralUrls.length === 0) return;
+
+    for (const referralUrl of referralUrls) {
+      items.push({
+        id: referralUrl,
+        title,
+        link: referralUrl,
+        postLink: link,
+        description: stripHtml(description) || null,
+        date: publishedAt,
+        source: 'public-search',
+        sourceName,
+        scrapedAt: now.toISOString(),
+      });
+    }
   });
 
   return items;
