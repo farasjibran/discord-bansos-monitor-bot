@@ -8,7 +8,8 @@ Bot Discord untuk memantau konten terbaru dari **multiple sources** dan mengirim
 
 ## 🚀 Fitur
 
-- ✅ **Multi-website monitoring**: Monitor 2 sumber sekaligus (AppVerse & Bansos.dev)
+- ✅ **Multi-source monitoring**: AppVerse, Bansos.dev, Google News RSS, Reddit RSS, dan Threads API (opsional)
+- ✅ **Recent referral search**: Hanya hasil bertanggal maksimal 7 hari yang menyebut Claude/Anthropic dan referral/invite/gift/trial
 - ✅ **Auto-monitoring**: Cek konten baru setiap 1 jam (bisa dikustomisasi)
 - ✅ **Notifikasi Discord**: Kirim notifikasi otomatis dengan embed yang menarik
 - ✅ **Source differentiation**: Format embed berbeda per sumber
@@ -234,6 +235,29 @@ this.scrapers = [
   new NewSiteScraper('https://newsite.com/api') // ← Tambahkan di sini
 ];
 ```
+
+## 🔎 Pencarian referral publik
+
+Bot mencari hasil publik lewat Google News RSS dan Reddit RSS. Hasil hanya
+lolos bila judul/deskripsi menyebut `Claude` atau `Anthropic` sekaligus salah
+satu kata `referral`, `invite`, `gift`, `trial`, atau `free pro`. Item tanpa
+tanggal valid, lebih lama dari 7 hari, atau bertanggal masa depan akan dibuang.
+Threads API memakai query `RECENT` dan hanya aktif jika `THREADS_ACCESS_TOKEN`
+diset. Token membutuhkan permission `threads_basic` dan `threads_keyword_search`;
+pencarian post publik memerlukan approval Meta untuk permission pencarian.
+Tanpa approval, hasil Threads mungkin terbatas ke post akun pemilik token.
+Link dikirim untuk dibuka dan diklaim manual; bot tidak membuat akun atau
+mengklaim trial. Sumber publik bisa tidak lengkap, berubah format, atau
+membatasi akses; kegagalan satu sumber tidak menghentikan sumber lain.
+
+Tes filter lokal tanpa Discord atau akses internet:
+
+```bash
+npm run test:rss
+```
+
+Set `THREADS_ACCESS_TOKEN` di `.env` untuk mengaktifkan pencarian Threads.
+Jangan commit token tersebut.
 
 ## ⚙️ Konfigurasi
 

@@ -115,6 +115,10 @@ class DiscordNotifier {
         footerText: 'Source: Bansos.dev',
         footerIcon: 'https://bansos.dev/favicon.ico',
         featuredColor: 0xFBBF24 // Yellow untuk Featured items
+      },
+      'public-search': {
+        color: 0x5865F2,
+        footerText: `Public result: ${item.sourceName || 'RSS'}`,
       }
     };
 
@@ -151,7 +155,20 @@ class DiscordNotifier {
     // Build fields berdasarkan source
     const fields = [];
 
-    if (source === 'appverse') {
+    if (source === 'public-search') {
+      if (item.date) {
+        fields.push({
+          name: 'Published',
+          value: new Date(item.date).toLocaleString('id-ID'),
+          inline: true
+        });
+      }
+      fields.push({
+        name: 'Source',
+        value: item.sourceName || 'Public RSS',
+        inline: true
+      });
+    } else if (source === 'appverse') {
       // AppVerse specific fields
       if (item.dateText) {
         fields.push({

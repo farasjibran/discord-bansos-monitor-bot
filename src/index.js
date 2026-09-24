@@ -2,6 +2,7 @@ import dotenv from 'dotenv';
 import cron from 'node-cron';
 import AppVerseScraper from './scrapers/appverse-scraper.js';
 import BansosDevScraper from './scrapers/bansosdev-scraper.js';
+import PublicSearchRssScraper from './scrapers/public-search-rss.js';
 import Storage from './storage.js';
 import DiscordNotifier from './discord-client.js';
 
@@ -22,7 +23,8 @@ class BansosAIMonitor {
     // Initialize multiple scrapers
     this.scrapers = [
       new AppVerseScraper('https://appverse.id/bansos-ai'),
-      new BansosDevScraper('https://bansos.dev/list/')
+      new BansosDevScraper('https://bansos.dev/list/'),
+      new PublicSearchRssScraper()
     ];
     
     this.storage = new Storage();
